@@ -30,6 +30,7 @@ data class MemoryProposal(
 data class Conversation(
     val id: String,
     val title: String?,
+    val username: String,
     val updated_at: String
 )
 

@@ -24,7 +24,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.multiforge_android.ui.theme.MultiforgeandroidTheme
 import kotlinx.coroutines.launch
-import androidx.core.view.WindowCompat
+import io.noties.markwon.Markwon
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.runtime.remember
 
 val DarkBg = Color(0xFF0A0A0F)
 val SidebarBg = Color(0xFF111118)
@@ -270,13 +272,33 @@ fun MessageBubble(
                 )
                 .padding(12.dp)
         ) {
-            Text(
-                text = msg.content,
-                color = Color.White,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp,
-                lineHeight = 20.sp
-            )
+            if (msg.role == "assistant") {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val markwon = remember {
+                    Markwon.builder(context)
+                        .usePlugin(io.noties.markwon.ext.tables.TablePlugin.create(context))
+                        .build()
+                }
+                AndroidView(
+                    factory = { ctx ->
+                        android.widget.TextView(ctx).apply {
+                            setTextColor(android.graphics.Color.WHITE)
+                            textSize = 13f
+                        }
+                    },
+                    update = { tv ->
+                        markwon.setMarkdown(tv, msg.content)
+                    }
+                )
+            } else {
+                Text(
+                    text = msg.content,
+                    color = Color.White,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp
+                )
+            }
         }
 
         // Memory proposals

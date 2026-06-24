@@ -29,13 +29,13 @@ class MainViewModel : ViewModel() {
         user.value = newUser
         activeConversationId.value = null
         messages.clear()
-        fetchConversations()
+        fetchConversations(newUser)
     }
 
-    fun fetchConversations() {
+    fun fetchConversations(forUser: String = user.value) {
         viewModelScope.launch {
             try {
-                val result = ApiClient.api.getConversations(user.value)
+                val result = ApiClient.api.getConversations(forUser)
                 conversations.clear()
                 conversations.addAll(result)
             } catch (e: Exception) {
