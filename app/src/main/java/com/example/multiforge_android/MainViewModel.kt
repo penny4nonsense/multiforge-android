@@ -9,7 +9,8 @@ import kotlinx.coroutines.launch
 data class UiMessage(
     val role: String,
     val content: String,
-    val proposals: List<MemoryProposal> = emptyList()
+    val proposals: List<MemoryProposal> = emptyList(),
+    val imageUrls: List<String> = emptyList()
 )
 
 class MainViewModel : ViewModel() {
@@ -51,7 +52,11 @@ class MainViewModel : ViewModel() {
                 activeConversationId.value = id
                 messages.clear()
                 messages.addAll(detail.messages.map {
-                    UiMessage(role = it.role, content = it.content)
+                    UiMessage(
+                        role = it.role,
+                        content = it.content,
+                        imageUrls = it.images.map { img -> "http://192.168.1.75:8001/images/$img" }
+                    )
                 })
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -84,7 +89,8 @@ class MainViewModel : ViewModel() {
                     UiMessage(
                         role = "assistant",
                         content = response.reply,
-                        proposals = response.proposals
+                        proposals = response.proposals,
+                        imageUrls = response.images.map { "http://192.168.1.75:8001/images/$it" }
                     )
                 )
             } catch (e: Exception) {

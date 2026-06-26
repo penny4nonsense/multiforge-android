@@ -7,7 +7,7 @@ import retrofit2.http.*
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
-const val BASE_URL = "http://192.168.50.184:8001"
+const val BASE_URL = "http://192.168.1.75:8001"
 
 data class ChatRequest(
     val message: String,
@@ -18,7 +18,8 @@ data class ChatRequest(
 data class ChatResponse(
     val conversation_id: String,
     val reply: String,
-    val proposals: List<MemoryProposal>
+    val proposals: List<MemoryProposal>,
+    val images: List<String> = emptyList()
 )
 
 data class MemoryProposal(
@@ -38,6 +39,7 @@ data class Message(
     val id: String,
     val role: String,
     val content: String,
+    val images: List<String> = emptyList(),
     val created_at: String
 )
 

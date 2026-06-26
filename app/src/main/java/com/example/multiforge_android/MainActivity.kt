@@ -21,12 +21,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.multiforge_android.ui.theme.MultiforgeandroidTheme
 import kotlinx.coroutines.launch
-import io.noties.markwon.Markwon
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.runtime.remember
+import android.webkit.WebView
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 val DarkBg = Color(0xFF0A0A0F)
 val SidebarBg = Color(0xFF111118)
@@ -274,20 +273,54 @@ fun MessageBubble(
         ) {
             if (msg.role == "assistant") {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val markwon = remember {
-                    Markwon.builder(context)
-                        .usePlugin(io.noties.markwon.ext.tables.TablePlugin.create(context))
-                        .build()
-                }
                 AndroidView(
                     factory = { ctx ->
-                        android.widget.TextView(ctx).apply {
-                            setTextColor(android.graphics.Color.WHITE)
-                            textSize = 13f
+                        WebView(ctx).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                            isVerticalScrollBarEnabled = false
                         }
                     },
-                    update = { tv ->
-                        markwon.setMarkdown(tv, msg.content)
+                    update = { wv ->
+                        val html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+                <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+                <style>
+                  body { background: transparent; color: #f1f5f9; font-family: monospace; font-size: 13px; margin: 0; padding: 0; word-wrap: break-word; }
+                  pre { background: #1e293b; border-radius: 6px; padding: 10px; overflow-x: auto; }
+                  code { font-family: monospace; font-size: 12px; }
+                  table { border-collapse: collapse; width: 100%; }
+                  th, td { border: 1px solid #334155; padding: 6px 10px; }
+                  th { background: #1e293b; }
+                  p { margin: 4px 0; }
+                </style>
+                </head>
+                <body>
+                <div id="content"></div>
+                <script>
+                  const content = ${com.google.gson.Gson().toJson(msg.content)};
+                  document.getElementById('content').innerHTML = marked.parse(content);
+                  renderMathInElement(document.body, {delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\\\[', right: '\\\\]', display: true},
+                    {left: '\\\\(', right: '\\\\)', display: false}
+                  ]});
+                  hljs.highlightAll();
+                </script>
+                </body>
+                </html>
+            """.trimIndent()
+                        wv.loadDataWithBaseURL("https://cdn.jsdelivr.net", html, "text/html", "UTF-8", null)
                     }
                 )
             } else {
@@ -299,6 +332,34 @@ fun MessageBubble(
                     lineHeight = 20.sp
                 )
             }
+        }
+
+        // Images
+        msg.imageUrls.forEach { url ->
+            Spacer(modifier = Modifier.height(8.dp))
+            AndroidView(
+                factory = { ctx ->
+                    android.widget.ImageView(ctx).apply {
+                        scaleType = android.widget.ImageView.ScaleType.FIT_START
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        )
+                    }
+                },
+                update = { iv ->
+                    Thread {
+                        try {
+                            val bitmap = android.graphics.BitmapFactory.decodeStream(
+                                java.net.URL(url).openStream()
+                            )
+                            iv.post { iv.setImageBitmap(bitmap) }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }.start()
+                }
+            )
         }
 
         // Memory proposals
